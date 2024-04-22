@@ -1,0 +1,18 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"target": "es2020",
+		"outDir": "dist",
+		"sourceMap": true,
+		"rootDir": "src",
+		"paths": {
+			"@env/*": ["./src/env/node/*"]
+		}
+	},
+	"exclude": [
+		"node_modules",
+		".vscode-test",
+		"dist",
+		"src/env/browser/**/*"
+	]
+}

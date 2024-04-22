@@ -1,0 +1,130 @@
+{
+	"name": "onelake-vscode",
+	"displayName": "OneLake VSCode",
+	"description": "Fabric OneLake Extension for VSCode",
+	"version": "0.0.1",
+	"publisher": "GerhardBrueckl",
+	"icon": "resources/onelake_extension.png",
+	"author": {
+		"name": "Gerhard Brueckl"
+	},
+	"contributors": [
+		"Gerhard Brueckl"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/gbrueckl/OneLake-VSCode/blob/master/README.md",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/gbrueckl/OneLake-VSCode"
+	},
+	"bugs": {
+		"url": "https://github.com/gbrueckl/OneLake-VSCode/issues",
+		"email": "OneLake-vscode@gbrueckl.at"
+	},
+	"qna": "https://github.com/gbrueckl/OneLake-VSCode/issues",
+	"sponsor": {
+		"url": "https://github.com/sponsors/gbrueckl"
+	},
+	"engines": {
+		"vscode": "^1.82.0"
+	},
+	"galleryBanner": {
+		"color": "#0ea5ff",
+		"theme": "dark"
+	},
+	"categories": [
+		"Azure",
+		"Extension Packs",
+		"Other"
+	],
+	"keywords": [
+		"OneLake",
+		"Fabric",
+		"REST",
+		"API",
+		"DataLake",
+		"Storage"
+	],
+	"activationEvents": [
+		"onFileSystem:onelake",
+		"onFileSystem:fabric"
+	],
+	"capabilities": {
+		"virtualWorkspaces":true
+	},
+	"main": "./dist/node/extension.js",
+	"browser": "./dist/web/extension.js",
+	"contributes": {
+		"configuration": [
+			{
+				"title": "Power BI",
+				"properties": {
+					"oneLake.tenantId": {
+						"type": "string",
+						"description": "(Optional) A custom TenantID to connect to a remote Tenant where you are a guest user.",
+						"default": null
+					},
+					"oneLake.clientId": {
+						"type": "string",
+						"markdownDescription": "(Optional) A custom ClientID/AAD Application to use when interacting with Power BI REST APIs.",
+						"default": null
+					}
+				}
+			}
+		],
+		"commands": [
+			{
+				"command": "OneLake.initialize",
+				"title": "Initialize Extension",
+				"category": "OneLake"
+			},
+			{
+				"command": "OneLake.mountInWorkspace",
+				"title": "Mount OneLake in VSCode Workspace",
+				"icon": "$(cloud-download)",
+				"category": "OneLake"
+			},
+			{
+				"command": "OneLake.reloadFromOneLake",
+				"title": "Reload from OneLake",
+				"icon": "$(cloud-download)",
+				"category": "OneLake"
+			}
+		],
+		"explorer/context": [
+			{
+				"command": "OneLake.reloadFromOneLake",
+				"when": "resourceScheme == onelake"
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run package",
+		"compile": "webpack",
+		"watch": "webpack --watch",
+		"package": "webpack --mode production --devtool hidden-source-map",
+		"lint": "eslint src --ext ts",
+		"test": "vscode-test-web --extensionDevelopmentPath=. --extensionTestsPath=dist/web/extension.js"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.2.0",
+		"@types/mocha": "^9.1.1",
+		"@types/node": "^12.12.0",
+		"@types/rimraf": "^2.0.5",
+		"@types/vscode": "^1.68.0",
+		"buffer": "^6.0.3",
+		"eslint": "^8.19.0",
+		"glob": "^8.0.3",
+		"https-agent": "^1.0.0",
+		"https-proxy-agent": "^5.0.1",
+		"mocha": "^10.0.0",
+		"native-ext-loader": "^2.3.0",
+		"net": "^1.0.2",
+		"node-fetch": "^3.3.2",
+		"ts-loader": "^9.3.1",
+		"typescript": "^4.7.4",
+		"webpack": "^5.74.0",
+		"webpack-cli": "^4.10.0",
+		"form-data": "^4.0.0"
+	}
+}
