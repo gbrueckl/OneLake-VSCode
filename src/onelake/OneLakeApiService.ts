@@ -46,7 +46,7 @@ export abstract class OneLakeApiService {
 		this._vscodeSession = await this.getStorageSession();
 
 		if (!this._vscodeSession || !this._vscodeSession.accessToken) {
-			vscode.window.showInformationMessage("PowerBI / API: Please log in with your Microsoft account first!");
+			vscode.window.showInformationMessage("OneLake / API: Please log in with your Microsoft account first!");
 			return;
 		}
 
@@ -57,7 +57,7 @@ export abstract class OneLakeApiService {
 			"Accept": 'application/json'
 		}
 
-		ThisExtension.log(`Testing new PowerBI API (${this._apiBaseUrl}) settings for user '${this.SessionUser}' (${this.SessionUserId}) ...`);
+		ThisExtension.log(`Testing new OneLake API (${this._apiBaseUrl}) settings for user '${this.SessionUser}' (${this.SessionUserId}) ...`);
 		this._connectionTestRunning = true;
 		let workspaceList = await this.get("/", {"resource":"account", "recursive": false});
 		this._connectionTestRunning = false;
@@ -377,7 +377,7 @@ export abstract class OneLakeApiService {
 		ThisExtension.log("POST " + endpoint + " --> File: " + JSON.stringify(urlParams));
 
 		try {
-			// we manally build the formData as the node-fetch API for formData does not work with the PowerBI API
+			// we manally build the formData as the node-fetch API for formData does not work 
 			var boundary = "----WebKitFormBoundarykRourla9fGPRMwf6";
 			var data = "";
 			data += "--" + boundary + "\r\n";
