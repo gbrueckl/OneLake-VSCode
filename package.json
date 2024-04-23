@@ -2,7 +2,7 @@
 	"name": "onelake-vscode",
 	"displayName": "OneLake VSCode",
 	"description": "Fabric OneLake Extension for VSCode",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"publisher": "GerhardBrueckl",
 	"icon": "resources/onelake_extension.png",
 	"author": {
@@ -50,14 +50,14 @@
 		"onFileSystem:fabric"
 	],
 	"capabilities": {
-		"virtualWorkspaces":true
+		"virtualWorkspaces": true
 	},
 	"main": "./dist/node/extension.js",
 	"browser": "./dist/web/extension.js",
 	"contributes": {
 		"configuration": [
 			{
-				"title": "Power BI",
+				"title": "OneLake",
 				"properties": {
 					"oneLake.tenantId": {
 						"type": "string",
@@ -91,12 +91,15 @@
 				"category": "OneLake"
 			}
 		],
-		"explorer/context": [
-			{
-				"command": "OneLake.reloadFromOneLake",
-				"when": "resourceScheme == onelake"
-			}
-		]
+		"menus": {
+			"explorer/context": [
+				{
+					"command": "OneLake.reloadFromOneLake",
+					"when": "resourceScheme == onelake",
+					"group": "2_workspace"
+				}
+			]
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run package",

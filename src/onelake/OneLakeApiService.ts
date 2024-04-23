@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { fetch,  RequestInit, Response, getProxyAgent } from '@env/fetch';
 
-import { Helper, UniqueId } from '../helpers/Helper';
+import { Helper } from '../helpers/Helper';
 import { ThisExtension } from '../ThisExtension';
 
 export abstract class OneLakeApiService {
@@ -197,7 +197,7 @@ export abstract class OneLakeApiService {
 			uri = uri.with({ query: urlParams.join('&') })
 		}
 
-		return uri.toString(true);
+		return encodeURI(uri.toString(true));
 	}
 
 	static async get<T = any>(endpoint: string, params: object = null, raiseError: boolean = false, raw: boolean = false): Promise<T> {
@@ -435,6 +435,45 @@ export abstract class OneLakeApiService {
 			const buffer = Buffer.from(binary);
 
 			return await this.postImport<T>(endpoint, buffer, fileName, urlParams, raiseError);
+		} catch (error) {
+			this.handleApiException(error, false, raiseError);
+
+			return undefined;
+		}
+	}
+
+	static async head<T>(endpoint: string, raiseError: boolean = false): Promise<T> {
+		endpoint = this.getFullUrl(endpoint);
+		ThisExtension.log("HEAD " + endpoint);
+
+		try {
+			const config: RequestInit = {
+				method: "HEAD",
+				headers: this._headers,
+				agent: getProxyAgent()
+			};
+			let response: Response = await fetch(endpoint, config);
+
+			let resultText = await response.text();
+			let ret: T;
+
+			if (response.ok) {
+				ret = response.headers as T;
+			}
+			else {
+				if (!resultText || resultText == "") {
+					ret = { "error": { "status": response.status, "statusText": response.statusText } } as T;
+				}
+				if (raiseError) {
+					throw new Error(resultText);
+				}
+				else {
+					ret = { "error": { "message": resultText, "status": response.status, "statusText": response.statusText } } as T;
+				}
+			}
+
+			await this.logResponse(ret);
+			return ret;
 		} catch (error) {
 			this.handleApiException(error, false, raiseError);
 

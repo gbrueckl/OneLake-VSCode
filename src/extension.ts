@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import { ThisExtension } from './ThisExtension';
 import { OneLakeFileSystemProvider } from './vscode/filesystemProvider/OneLakeFileSystemProvider';
 import { OneLakeFSCache } from './vscode/filesystemProvider/OneLakeFSCache';
+import { Helper } from './helpers/Helper';
 
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -41,6 +42,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		return isValidated;
 	}
+	);
+
+	vscode.commands.registerCommand('OneLake.mountInWorkspace',
+		() => Helper.addToWorkspace(vscode.Uri.parse("onelake://", true), "OneLake")
 	);
 
 	vscode.commands.executeCommand('OneLake.initialize');

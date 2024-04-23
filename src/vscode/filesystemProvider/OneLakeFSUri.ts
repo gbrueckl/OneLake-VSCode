@@ -91,6 +91,7 @@ export class OneLakeFSUri {
 			case OneLakeUriType.workspace:
 				return new OneLakeFSWorkspace(this) as T;
 			case OneLakeUriType.item:
+			case OneLakeUriType.path:
 				return new OneLakeFSItem(this) as T;
 			default:
 				ThisExtension.log("getCacheItem() - Invalid URI type: " + this.uriType);

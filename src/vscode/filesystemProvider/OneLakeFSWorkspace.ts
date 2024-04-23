@@ -25,11 +25,11 @@ export class OneLakeFSWorkspace extends OneLakeFSCacheItem {
 
 	public async loadChildrenFromApi<T>(): Promise<void> {
 		if (!this._children) {
-			const response = await OneLakeApiService.getList(this._uri.apiPath, {"resource":"filesystem"});
+			const response = await OneLakeApiService.getList(this._uri.apiPath, {"resource":"filesystem", "recursive":false}, "paths");
 			this._apiResponse = response;
 			this._children = [];
 			for (let apiItem of this._apiResponse) {
-				this._children.push([apiItem.name, vscode.FileType.Directory]);
+				this._children.push([apiItem.name, apiItem.isDirectory == 'true' ? vscode.FileType.Directory: vscode.FileType.File]);
 			}
 		}
 	}
