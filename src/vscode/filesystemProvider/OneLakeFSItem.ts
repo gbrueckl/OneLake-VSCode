@@ -18,6 +18,17 @@ export class OneLakeFSItem extends OneLakeFSCacheItem {
 		if (!this._stats) {
 			const response = await OneLakeApiService.head<Headers>(this._uri.apiPath);
 
+			// for remote tenants the HEAD call does not always work 
+			// if we are on item-Level (2 parts in the path) and the HEAD call fails we assume it is a directory
+			if((!response || response["error"]) && this._uri.apiPath.split("/").length == 3) {
+				this._stats = {
+					type: vscode.FileType.Directory,
+					ctime: undefined,
+					mtime: undefined,
+					size: undefined
+				};
+				return;
+			}
 			this._stats = {
 				type: response.get("x-ms-resource-type") == 'directory' ? vscode.FileType.Directory : vscode.FileType.File,
 				ctime: Date.parse(response.get("x-ms-creation-time")),//'Thu, 18 Jan 2024 12:57:08 GMT'
