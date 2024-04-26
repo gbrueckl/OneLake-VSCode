@@ -5,6 +5,7 @@ import { ENVIRONMENT } from '@env/env';
 import { OneLakeConfiguration } from './vscode/configuration/OneLakeConfiguration';
 import { OneLakeFileSystemProvider } from './vscode/filesystemProvider/OneLakeFileSystemProvider';
 import { OneLakeApiService } from './onelake/OneLakeApiService';
+import { OneLakeFSCache } from './vscode/filesystemProvider/OneLakeFSCache';
 
 
 // https://vshaxe.github.io/vscode-extern/vscode/TreeDataProvider.html
@@ -61,6 +62,8 @@ export abstract class ThisExtension {
 				config.tenantId,
 				config.clientId
 			);
+
+			OneLakeFSCache.initialize()
 
 			await this.setContext();
 		} catch (error) {

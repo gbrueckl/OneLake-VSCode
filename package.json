@@ -2,7 +2,7 @@
 	"name": "onelake-vscode",
 	"displayName": "OneLake VSCode",
 	"description": "Fabric OneLake Extension for VSCode",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"publisher": "GerhardBrueckl",
 	"icon": "resources/onelake_extension.png",
 	"author": {
@@ -40,6 +40,7 @@
 	"keywords": [
 		"OneLake",
 		"Fabric",
+		"ADLS",
 		"REST",
 		"API",
 		"DataLake",
@@ -89,7 +90,7 @@
 				"title": "Reload from OneLake",
 				"icon": "$(cloud-download)",
 				"category": "OneLake"
-			}
+			}			
 		],
 		"menus": {
 			"explorer/context": [
