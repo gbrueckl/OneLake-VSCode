@@ -2,7 +2,7 @@
 	"name": "onelake-vscode",
 	"displayName": "OneLake VSCode",
 	"description": "Fabric OneLake Extension for VSCode",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"publisher": "GerhardBrueckl",
 	"icon": "resources/onelake_extension.png",
 	"author": {
