@@ -8,7 +8,7 @@ export abstract class OneLakeConfiguration {
 	static set clientId(value: string) { this.setValue("clientId", value); }
 
 	static get config(): vscode.WorkspaceConfiguration {
-		return vscode.workspace.getConfiguration("onelake");
+		return vscode.workspace.getConfiguration("oneLake");
 	}
 
 	static getValue<T>(key: string): T {

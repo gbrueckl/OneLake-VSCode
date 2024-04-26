@@ -18,9 +18,10 @@ export abstract class OneLakeApiService {
 
 	//#region Initialization
 	static async initialize(
-		apiBaseUrl: string = "https://onelake.dfs.fabric.microsoft.com/",
+		
 		tenantId: string = undefined,
 		clientId: string = undefined,
+		apiBaseUrl: string = "https://onelake.dfs.fabric.microsoft.com/",
 		authenticationProvider: string = "microsoft"
 	): Promise<boolean> {
 		try {

@@ -118,7 +118,7 @@ export class OneLakeFSCacheItem {
 				ThisExtension.logDebug(`OneLake URI Children for ${this.OneLakeUri.uri.toString()} successfully loaded in other process!`);
 			}
 			else {
-				ThisExtension.logDebug(`OneLake URI Children for ${this.OneLakeUri.uri.toString()} failed to load in other process within 10 secons!`);
+				ThisExtension.logDebug(`OneLake URI Children for ${this.OneLakeUri.uri.toString()} failed to load in other process within 10 seconds!`);
 				ThisExtension.logDebug(`Resetting loading state to 'not_loaded' ... `);
 				this.loadingStateChildren = "not_loaded";
 			}
