@@ -4,7 +4,7 @@
 [![Downloads](https://img.shields.io/visual-studio-marketplace/d/GerhardBrueckl.onelake-vscode)](https://marketplace.visualstudio.com/items?itemName=GerhardBrueckl.onelake-vscode)
 [![Ratings](https://img.shields.io/visual-studio-marketplace/r/GerhardBrueckl.onelake-vscode)](https://marketplace.visualstudio.com/items?itemName=GerhardBrueckl.onelake-vscode)
 
-![OneLake-VSCode](/images/onelake_vscode.png?raw=true "OneLake-VSCode")
+![OneLake-VSCode](/images/onelake_VSCode.png?raw=true "OneLake-VSCode")
 
 A [VSCode](https://code.visualstudio.com/) extension for to browse Fabric OneLake.
 
