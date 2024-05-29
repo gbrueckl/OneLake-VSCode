@@ -106,4 +106,12 @@ export class OneLakeFSUri {
 	get apiPath(): string {
 		return this.uri.path
 	}
+
+	get fileSystem():string {
+		return this.uri.path.split("/")[1].replace(" ", "-");
+	}
+
+	get directory(): string {
+		return encodeURI("/" + this.uri.path.split("/").slice(2).join("/"));
+	}
 }

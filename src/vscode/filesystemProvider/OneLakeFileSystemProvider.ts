@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 
 import { ThisExtension } from '../../ThisExtension';
-import { Helper } from '../../helpers/Helper';
-import { Buffer } from '@env/buffer';
 import { OneLakeFSUri } from './OneLakeFSUri';
 import { OneLakeFSCache } from './OneLakeFSCache';
 import { OneLakeFSCacheItem } from './OneLakeFSCacheItem';

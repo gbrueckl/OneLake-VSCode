@@ -207,12 +207,7 @@ export abstract class OneLakeApiService {
 		}
 		else {
 			endpoint = this.getFullUrl(endpoint, params);
-			if (params) {
-				ThisExtension.log("GET " + endpoint + " --> " + JSON.stringify(params));
-			}
-			else {
-				ThisExtension.log("GET " + endpoint);
-			}
+			ThisExtension.log("GET " + endpoint);
 
 			try {
 				const config: RequestInit = {
@@ -443,8 +438,8 @@ export abstract class OneLakeApiService {
 		}
 	}
 
-	static async head<T>(endpoint: string, raiseError: boolean = false): Promise<T> {
-		endpoint = this.getFullUrl(endpoint);
+	static async head<T>(endpoint: string, params: object = {}, raiseError: boolean = false): Promise<T> {
+		endpoint = this.getFullUrl(endpoint, params);
 		ThisExtension.log("HEAD " + endpoint);
 
 		try {

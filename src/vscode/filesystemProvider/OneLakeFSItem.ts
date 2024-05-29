@@ -43,9 +43,9 @@ export class OneLakeFSItem extends OneLakeFSCacheItem {
 			const params = {
 				"resource": "filesystem",
 				"recursive": false,
-				"directory": this.uri.path
+				"directory": encodeURI(this.OneLakeUri.directory)
 			}
-			const response = await OneLakeApiService.getList(this._uri.apiPath, params, "paths");
+			const response = await OneLakeApiService.getList(this.OneLakeUri.fileSystem, params, "paths");
 			this._apiResponse = response;
 			this._children = [];
 			for (let apiItem of this._apiResponse) {
