@@ -127,19 +127,19 @@ export class OneLakeFSCacheItem {
 	}
 
 	public async readFile(): Promise<Uint8Array | undefined> {
-		throw new Error("Method not implemented.");
+		throw vscode.FileSystemError.NoPermissions("OneLake is currently read-only!");
 	}
 
 	async writeFile(content: Uint8Array, options: { create: boolean, overwrite: boolean }): Promise<void> {
-		throw new Error("Method not implemented.");
+		throw vscode.FileSystemError.NoPermissions("OneLake is currently read-only!");
 	}
 
 	public async loadChildrenFromApi<T>(): Promise<void> {
-		throw new Error("Method not implemented.");
+		throw vscode.FileSystemError.NoPermissions("Method not implemented.");
 	}
 
 	public async loadStatsFromApi<T>(): Promise<void> {
-		throw new Error("Method not implemented.");
+		throw vscode.FileSystemError.NoPermissions("Method not implemented.");
 	}
 
 	public addChild(name: string, type: vscode.FileType): void {

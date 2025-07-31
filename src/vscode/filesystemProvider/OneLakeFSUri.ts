@@ -36,7 +36,7 @@ export class OneLakeFSUri {
 		this.uri = vscode.Uri.parse(uriString.replace("//", "/"));
 
 		if (!this.isValid) {
-			throw vscode.FileSystemError.Unavailable("Invalid Fabric URI!");
+			throw vscode.FileSystemError.Unavailable("Invalid OneLake URI!");
 		}
 		
 		let paths = uriString.split("/").filter((path) => path.length > 0).slice(1);

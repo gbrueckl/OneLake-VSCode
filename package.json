@@ -2,7 +2,7 @@
 	"name": "onelake-vscode",
 	"displayName": "OneLake VSCode",
 	"description": "Fabric OneLake Extension for VSCode",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"publisher": "GerhardBrueckl",
 	"icon": "resources/onelake_extension.png",
 	"author": {
@@ -47,8 +47,7 @@
 		"Storage"
 	],
 	"activationEvents": [
-		"onFileSystem:onelake",
-		"onFileSystem:fabric"
+		"onFileSystem:onelake"
 	],
 	"capabilities": {
 		"virtualWorkspaces": true

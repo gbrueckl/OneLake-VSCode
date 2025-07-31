@@ -27,7 +27,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	// some of the following code needs the context before the initialization already
 	ThisExtension.extensionContext = context;
 
-	// Fabric FileSystemProvider
+	// OneLake FileSystemProvider
 	OneLakeFileSystemProvider.register(context);
 
 	vscode.commands.registerCommand('OneLake.reloadFromOneLake',

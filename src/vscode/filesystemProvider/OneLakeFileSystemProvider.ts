@@ -70,16 +70,16 @@ export class OneLakeFileSystemProvider implements vscode.FileSystemProvider, vsc
 	}
 
 	async createDirectory(uri: vscode.Uri): Promise<void> {
-		throw new Error('Method not implemented.');
+		throw vscode.FileSystemError.NoPermissions("OneLake is currently read-only!");
 	}
 	async delete(uri: vscode.Uri, options: { readonly recursive: boolean; }): Promise<void> {
-		throw new Error('Method not implemented.');
+		throw vscode.FileSystemError.NoPermissions("OneLake is currently read-only!");
 	}
 	async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { readonly overwrite: boolean; }): Promise<void> {
-		throw new Error('Method not implemented.');
+		throw vscode.FileSystemError.NoPermissions("OneLake is currently read-only!");
 	}
 	async copy?(source: vscode.Uri, destination: vscode.Uri, options: { readonly overwrite: boolean; }): Promise<void> {
-		throw new Error('Method not implemented.');
+		throw vscode.FileSystemError.NoPermissions("OneLake is currently read-only!");
 	}
 
 	/*
