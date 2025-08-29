@@ -1,5 +1,8 @@
 # Change Log
 
+**v0.2.1**:
+- added automated deploymend to OpenVSX
+
 **v0.2.0**:
 - added automated deploymend
 - minor fixes
