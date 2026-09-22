@@ -1,5 +1,8 @@
 # Change Log
 
+**v0.3.0**:
+- update ReadMe
+
 **v0.2.1**:
 - added automated deploymend to OpenVSX
 

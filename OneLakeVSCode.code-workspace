@@ -2,6 +2,10 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"name": "OneLake - bm_lakehouse",
+			"uri": "onelake://8dff2281-156c-4f24-b774-f627050f949f/fb68eac8-7446-4989-85f1-a42cfb41a401"
 		}
 	],
 	"settings": {
