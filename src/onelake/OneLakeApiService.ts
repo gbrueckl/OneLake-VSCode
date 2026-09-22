@@ -48,13 +48,11 @@ export abstract class OneLakeApiService {
 	private static _tenantId: string;
 	private static _clientId: string;
 	private static _authenticationProvider: string;
-	private static _headers;
 	private static _vscodeSession: vscode.AuthenticationSession;
 
 
 	//#region Initialization
 	static async initialize(
-		
 		tenantId: string = undefined,
 		clientId: string = undefined,
 		apiBaseUrl: string = "https://onelake.dfs.fabric.microsoft.com/",
@@ -63,13 +61,10 @@ export abstract class OneLakeApiService {
 		try {
 			ThisExtension.log("Initializing OneLake API Service ...");
 
-			vscode.authentication.onDidChangeSessions((event) => this._onDidChangeSessions(event));
-
 			this._apiBaseUrl = Helper.trimChar(apiBaseUrl, '/');
 			this._tenantId = tenantId;
 			this._clientId = clientId;
 			this._authenticationProvider = authenticationProvider;
-
 			await this.refreshConnection();
 		} catch (error) {
 			this._connectionTestRunning = false;
@@ -85,13 +80,6 @@ export abstract class OneLakeApiService {
 		if (!this._vscodeSession || !this._vscodeSession.accessToken) {
 			vscode.window.showInformationMessage("OneLake / API: Please log in with your Microsoft account first!");
 			return;
-		}
-
-		ThisExtension.log("Refreshing authentication headers ...");
-		this._headers = {
-			"Authorization": 'Bearer ' + this._vscodeSession.accessToken,
-			"Content-Type": 'application/json',
-			"Accept": 'application/json'
 		}
 
 		ThisExtension.log(`Testing new OneLake API (${this._apiBaseUrl}) settings for user '${this.SessionUser}' (${this.SessionUserId}) ...`);
@@ -111,16 +99,9 @@ export abstract class OneLakeApiService {
 
 	public static async getStorageSession(): Promise<vscode.AuthenticationSession> {
 		// we dont need to specify a clientId here as VSCode is a first party app and can use impersonation by default
-		let session = await this.getAADAccessToken(["https://storage.azure.com/user_impersonation"], this._tenantId, this._clientId);
+		const session = await this.getAADAccessToken(["https://storage.azure.com/user_impersonation"], this._tenantId, this._clientId);
+		this._vscodeSession = session;
 		return session;
-	}
-
-	private static async _onDidChangeSessions(event: vscode.AuthenticationSessionsChangeEvent) {
-		if (event.provider.id === this._authenticationProvider) {
-			ThisExtension.log("Session for provider '" + event.provider.label + "' changed - refreshing connections! ");
-
-			await this.refreshConnection();
-		}
 	}
 
 	public static async getAADAccessToken(scopes: string[], tenantId?: string, clientId?: string): Promise<vscode.AuthenticationSession> {
@@ -211,8 +192,16 @@ export abstract class OneLakeApiService {
 		}
 	}
 
-	public static getHeaders(): HeadersInit {
-		return this._headers;
+	public static async getHeaders(): Promise<Record<string, string>> {
+		const session = await this.getStorageSession();
+		if (!session?.accessToken) {
+			throw new OneLakeApiError('No Microsoft authentication session is available for OneLake.');
+		}
+		return {
+			'Authorization': `Bearer ${session.accessToken}`,
+			'Content-Type': 'application/json',
+			'Accept': 'application/json'
+		};
 	}
 
 	public static getFullUrl(endpoint: string, params?: object): string {
@@ -248,7 +237,7 @@ export abstract class OneLakeApiService {
 			try {
 				const config: RequestInit = {
 					method: "GET",
-					headers: this._headers,
+					headers: await this.getHeaders(),
 					agent: getProxyAgent()
 				};
 				let response: Response = await fetch(endpoint, config);
@@ -328,7 +317,7 @@ export abstract class OneLakeApiService {
 			const timeout = setTimeout(() => controller.abort(), timeoutMs);
 			const requestId = this.createRequestId();
 			const headers: Record<string, string> = {
-				...this._headers,
+				...await this.getHeaders(),
 				'Accept': 'application/octet-stream, application/json, text/plain',
 				'x-ms-client-request-id': requestId
 			};
@@ -396,18 +385,12 @@ export abstract class OneLakeApiService {
 	}
 
 	public static async getWorkspaceItems(workspaceId: string): Promise<FabricWorkspaceItem[]> {
-		const session = await this.getAADAccessToken(['https://api.fabric.microsoft.com/.default'], this._tenantId, this._clientId);
-		const headers = {
-			'Authorization': `Bearer ${session.accessToken}`,
-			'Accept': 'application/json',
-			'x-ms-client-request-id': this.createRequestId()
-		};
 		let url = `https://api.fabric.microsoft.com/v1/workspaces/${encodeURIComponent(workspaceId)}/items`;
 		const items: FabricWorkspaceItem[] = [];
 
 		while (url) {
 			ThisExtension.log(`GET ${url}`);
-			const response: Response = await fetch(url, { method: 'GET', headers, agent: getProxyAgent() });
+			const response: Response = await fetch(url, { method: 'GET', headers: await this.getFabricHeaders(), agent: getProxyAgent() });
 			const body = await response.text();
 			if (!response.ok) {
 				throw new OneLakeApiError(body || `Fabric returned ${response.status} ${response.statusText}.`, response.status, response.statusText, response.headers.get('x-ms-request-id'));
@@ -421,18 +404,12 @@ export abstract class OneLakeApiService {
 	}
 
 	public static async getWorkspaces(): Promise<FabricWorkspace[]> {
-		const session = await this.getAADAccessToken(['https://api.fabric.microsoft.com/.default'], this._tenantId, this._clientId);
-		const headers = {
-			'Authorization': `Bearer ${session.accessToken}`,
-			'Accept': 'application/json',
-			'x-ms-client-request-id': this.createRequestId()
-		};
 		let url = 'https://api.fabric.microsoft.com/v1/workspaces';
 		const workspaces: FabricWorkspace[] = [];
 
 		while (url) {
 			ThisExtension.log(`GET ${url}`);
-			const response: Response = await fetch(url, { method: 'GET', headers, agent: getProxyAgent() });
+			const response: Response = await fetch(url, { method: 'GET', headers: await this.getFabricHeaders(), agent: getProxyAgent() });
 			const body = await response.text();
 			if (!response.ok) {
 				throw new OneLakeApiError(body || `Fabric returned ${response.status} ${response.statusText}.`, response.status, response.statusText, response.headers.get('x-ms-request-id'));
@@ -445,6 +422,15 @@ export abstract class OneLakeApiService {
 		return workspaces;
 	}
 
+	private static async getFabricHeaders(): Promise<Record<string, string>> {
+		const session = await this.getAADAccessToken(['https://api.fabric.microsoft.com/.default'], this._tenantId, this._clientId);
+		return {
+			'Authorization': `Bearer ${session.accessToken}`,
+			'Accept': 'application/json',
+			'x-ms-client-request-id': this.createRequestId()
+		};
+	}
+
 	public static async writeFile(endpoint: string, content: Uint8Array, options: OneLakeFileWriteOptions = {}): Promise<Headers> {
 		if (!this._isInitialized) {
 			throw new OneLakeApiError('OneLake API has not been initialized.');
@@ -452,11 +438,9 @@ export abstract class OneLakeApiService {
 
 		const timeoutMs = options.timeoutMs ?? 30000;
 		const commonHeaders: Record<string, string> = {
-			...this._headers,
 			'Accept': 'application/json',
 			'x-ms-client-request-id': this.createRequestId()
 		};
-		delete commonHeaders['Content-Type'];
 
 		// Creating an existing path truncates it. The conditional headers above make that
 		// safe for editor saves: existing files use their ETag; new files use '*'.
@@ -495,9 +479,11 @@ export abstract class OneLakeApiService {
 
 		try {
 			ThisExtension.log(`${method} ${url} (request ID: ${requestId})`);
+			const requestHeaders = { ...await this.getHeaders(), ...headers };
+			delete requestHeaders['Content-Type'];
 			const response: Response = await fetch(url, {
 				method,
-				headers,
+				headers: requestHeaders,
 				body: body === undefined ? undefined : Buffer.from(body),
 				agent: getProxyAgent(),
 				signal: controller.signal
@@ -561,7 +547,7 @@ export abstract class OneLakeApiService {
 		try {
 			const config: RequestInit = {
 				method: "POST",
-				headers: this._headers,
+				headers: await this.getHeaders(),
 				body: JSON.stringify(body),
 				agent: getProxyAgent()
 			};
@@ -618,7 +604,7 @@ export abstract class OneLakeApiService {
 				Buffer.from("\r\n--" + boundary + "--\r\n", "utf8"),
 			]);
 
-			let headers = { ...this._headers };
+			let headers = { ...await this.getHeaders() };
 			headers["Content-Type"] = "multipart/form-data; boundary=" + boundary;
 			delete headers["Content-Length"];
 
@@ -678,7 +664,7 @@ export abstract class OneLakeApiService {
 		try {
 			const config: RequestInit = {
 				method: "HEAD",
-				headers: this._headers,
+				headers: await this.getHeaders(),
 				agent: getProxyAgent()
 			};
 			let response: Response = await fetch(endpoint, config);
@@ -717,7 +703,7 @@ export abstract class OneLakeApiService {
 		try {
 			const config: RequestInit = {
 				method: "PUT",
-				headers: this._headers,
+				headers: await this.getHeaders(),
 				body: JSON.stringify(body),
 				agent: getProxyAgent()
 			};
@@ -762,7 +748,7 @@ export abstract class OneLakeApiService {
 		try {
 			const config: RequestInit = {
 				method: "PATCH",
-				headers: this._headers,
+				headers: await this.getHeaders(),
 				body: JSON.stringify(body),
 				agent: getProxyAgent()
 			};
@@ -807,7 +793,7 @@ export abstract class OneLakeApiService {
 		try {
 			const config: RequestInit = {
 				method: "DELETE",
-				headers: this._headers,
+				headers: await this.getHeaders(),
 				body: JSON.stringify(body),
 				agent: getProxyAgent()
 			};

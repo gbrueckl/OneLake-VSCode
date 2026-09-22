@@ -4,6 +4,7 @@
 - added write-support
 - added new logic to show workspace and item names when browsing
 - added new config setting `oneLake.restrictWritesToFiles` to only allow writes to `/Files`
+- reworked authentication for API calls
 
 **v0.3.0**:
 - update ReadMe
