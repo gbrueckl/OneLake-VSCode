@@ -5,6 +5,42 @@ import { fetch,  RequestInit, Response, getProxyAgent } from '@env/fetch';
 import { Helper } from '../helpers/Helper';
 import { ThisExtension } from '../ThisExtension';
 
+export class OneLakeApiError extends Error {
+	constructor(
+		message: string,
+		public readonly status?: number,
+		public readonly statusText?: string,
+		public readonly requestId?: string
+	) {
+		super(message);
+		this.name = 'OneLakeApiError';
+	}
+}
+
+export interface OneLakeFileReadOptions {
+	maxBytes?: number;
+	timeoutMs?: number;
+	retries?: number;
+	ifMatch?: string;
+}
+
+export interface OneLakeFileWriteOptions {
+	ifMatch?: string;
+	ifNoneMatch?: string;
+	timeoutMs?: number;
+}
+
+export interface FabricWorkspaceItem {
+	id: string;
+	displayName: string;
+	type: string;
+}
+
+export interface FabricWorkspace {
+	id: string;
+	displayName: string;
+}
+
 export abstract class OneLakeApiService {
 	private static _isInitialized: boolean = false;
 	private static _connectionTestRunning: boolean = false;
@@ -275,35 +311,232 @@ export abstract class OneLakeApiService {
 		return ret;
 	}
 
-	public static async getFile(endpoint: string, raiseError: boolean = true): Promise<Buffer> {
-		endpoint = this.getFullUrl(endpoint);
-		
-		try {
-			const config: RequestInit = {
-				method: "GET",
-				headers: this._headers,
-				agent: getProxyAgent()
-			};
-			let response: Response = await OneLakeApiService.get<Response>(endpoint, undefined, false, true);
-
-			if (response.ok) {
-				const blob = await response.blob();
-				const buffer = await blob.arrayBuffer();
-				const content = Buffer.from(buffer);
-
-				return content;
-			}
-			else {
-				let resultText = await response.text();
-				if (raiseError) {
-					throw new Error(resultText);
-				}
-			}
-		} catch (error) {
+	public static async getFile(endpoint: string, raiseError: boolean = true, options: OneLakeFileReadOptions = {}): Promise<Buffer> {
+		if (!this._isInitialized) {
+			const error = new OneLakeApiError('OneLake API has not been initialized.');
 			this.handleApiException(error, false, raiseError);
-
 			return undefined;
 		}
+
+		endpoint = this.getFullUrl(endpoint);
+		const timeoutMs = options.timeoutMs ?? 30000;
+		const retries = options.retries ?? 2;
+		let ifMatch = options.ifMatch;
+
+		for (let attempt = 0; attempt <= retries; attempt++) {
+			const controller = new AbortController();
+			const timeout = setTimeout(() => controller.abort(), timeoutMs);
+			const requestId = this.createRequestId();
+			const headers: Record<string, string> = {
+				...this._headers,
+				'Accept': 'application/octet-stream, application/json, text/plain',
+				'x-ms-client-request-id': requestId
+			};
+			delete headers['Content-Type'];
+			if (ifMatch) {
+				headers['If-Match'] = ifMatch;
+			}
+
+			try {
+				ThisExtension.log(`GET ${endpoint} (request ID: ${requestId})`);
+				const config: RequestInit = {
+					method: 'GET',
+					headers,
+					agent: getProxyAgent(),
+					signal: controller.signal
+				};
+				const response: Response = await fetch(endpoint, config);
+				const serviceRequestId = response.headers.get('x-ms-request-id') ?? requestId;
+
+				if (!response.ok) {
+					const body = await response.text();
+					// Some OneLake deployments reject a valid GUID path when an If-Match header is
+					// present, returning FriendlyNameSupportDisabled instead of a conditional error.
+					// HEAD has already established the path, so retry the read once without the
+					// optional condition. A normal 412 remains a real consistency failure.
+					if (ifMatch && response.status === 400 && body.includes('FriendlyNameSupportDisabled')) {
+						ThisExtension.log(`OneLake rejected If-Match for ${endpoint}; retrying without the optional condition (request ID: ${serviceRequestId}).`);
+						ifMatch = undefined;
+						continue;
+					}
+					const error = new OneLakeApiError(
+						body || `OneLake returned ${response.status} ${response.statusText}.`,
+						response.status,
+						response.statusText,
+						serviceRequestId
+					);
+					if (this.isTransientStatus(response.status) && attempt < retries) {
+						await this.delay(250 * Math.pow(2, attempt));
+						continue;
+					}
+					throw error;
+				}
+
+				const contentLength = Number(response.headers.get('content-length'));
+				if (options.maxBytes !== undefined && Number.isFinite(contentLength) && contentLength > options.maxBytes) {
+					throw new OneLakeApiError(`File is ${contentLength} bytes, exceeding the configured read limit of ${options.maxBytes} bytes.`, 413, 'FileTooLarge', serviceRequestId);
+				}
+
+				const content = Buffer.from(await response.arrayBuffer());
+				if (options.maxBytes !== undefined && content.byteLength > options.maxBytes) {
+					throw new OneLakeApiError(`File exceeds the configured read limit of ${options.maxBytes} bytes.`, 413, 'FileTooLarge', serviceRequestId);
+				}
+				return content;
+			} catch (error) {
+				if (attempt < retries && this.isTransientError(error)) {
+					await this.delay(250 * Math.pow(2, attempt));
+					continue;
+				}
+				this.handleApiException(error as Error, false, raiseError);
+				return undefined;
+			} finally {
+				clearTimeout(timeout);
+			}
+		}
+	}
+
+	public static async getWorkspaceItems(workspaceId: string): Promise<FabricWorkspaceItem[]> {
+		const session = await this.getAADAccessToken(['https://api.fabric.microsoft.com/.default'], this._tenantId, this._clientId);
+		const headers = {
+			'Authorization': `Bearer ${session.accessToken}`,
+			'Accept': 'application/json',
+			'x-ms-client-request-id': this.createRequestId()
+		};
+		let url = `https://api.fabric.microsoft.com/v1/workspaces/${encodeURIComponent(workspaceId)}/items`;
+		const items: FabricWorkspaceItem[] = [];
+
+		while (url) {
+			ThisExtension.log(`GET ${url}`);
+			const response: Response = await fetch(url, { method: 'GET', headers, agent: getProxyAgent() });
+			const body = await response.text();
+			if (!response.ok) {
+				throw new OneLakeApiError(body || `Fabric returned ${response.status} ${response.statusText}.`, response.status, response.statusText, response.headers.get('x-ms-request-id'));
+			}
+			const result = JSON.parse(body) as { value?: FabricWorkspaceItem[], continuationUri?: string };
+			items.push(...(result.value ?? []));
+			url = result.continuationUri;
+		}
+
+		return items;
+	}
+
+	public static async getWorkspaces(): Promise<FabricWorkspace[]> {
+		const session = await this.getAADAccessToken(['https://api.fabric.microsoft.com/.default'], this._tenantId, this._clientId);
+		const headers = {
+			'Authorization': `Bearer ${session.accessToken}`,
+			'Accept': 'application/json',
+			'x-ms-client-request-id': this.createRequestId()
+		};
+		let url = 'https://api.fabric.microsoft.com/v1/workspaces';
+		const workspaces: FabricWorkspace[] = [];
+
+		while (url) {
+			ThisExtension.log(`GET ${url}`);
+			const response: Response = await fetch(url, { method: 'GET', headers, agent: getProxyAgent() });
+			const body = await response.text();
+			if (!response.ok) {
+				throw new OneLakeApiError(body || `Fabric returned ${response.status} ${response.statusText}.`, response.status, response.statusText, response.headers.get('x-ms-request-id'));
+			}
+			const result = JSON.parse(body) as { value?: FabricWorkspace[], continuationUri?: string };
+			workspaces.push(...(result.value ?? []));
+			url = result.continuationUri;
+		}
+
+		return workspaces;
+	}
+
+	public static async writeFile(endpoint: string, content: Uint8Array, options: OneLakeFileWriteOptions = {}): Promise<Headers> {
+		if (!this._isInitialized) {
+			throw new OneLakeApiError('OneLake API has not been initialized.');
+		}
+
+		const timeoutMs = options.timeoutMs ?? 30000;
+		const commonHeaders: Record<string, string> = {
+			...this._headers,
+			'Accept': 'application/json',
+			'x-ms-client-request-id': this.createRequestId()
+		};
+		delete commonHeaders['Content-Type'];
+
+		// Creating an existing path truncates it. The conditional headers above make that
+		// safe for editor saves: existing files use their ETag; new files use '*'.
+		const createHeaders = { ...commonHeaders };
+		if (options.ifMatch) createHeaders['If-Match'] = options.ifMatch;
+		if (options.ifNoneMatch) createHeaders['If-None-Match'] = options.ifNoneMatch;
+		const createResponseHeaders = await this.sendFileRequest('PUT', endpoint, { resource: 'file' }, undefined, createHeaders, timeoutMs);
+
+		const chunkSize = 4 * 1024 * 1024;
+		for (let offset = 0; offset < content.byteLength; offset += chunkSize) {
+			const chunk = content.slice(offset, Math.min(offset + chunkSize, content.byteLength));
+			await this.sendFileRequest('PATCH', endpoint, { action: 'append', position: offset }, chunk, commonHeaders, timeoutMs);
+		}
+
+		// Supplying an empty body lets both node-fetch and browser fetch send Content-Length: 0.
+		// Append does not allow conditional headers. Flush is conditioned on the ETag
+		// returned by Create, preventing a conflicting final commit.
+		const flushHeaders = { ...commonHeaders };
+		const createdETag = createResponseHeaders.get('etag');
+		if (createdETag) flushHeaders['If-Match'] = createdETag;
+		return await this.sendFileRequest('PATCH', endpoint, { action: 'flush', position: content.byteLength, close: true }, new Uint8Array(), flushHeaders, timeoutMs);
+	}
+
+	private static async sendFileRequest(
+		method: 'PUT' | 'PATCH',
+		endpoint: string,
+		params: object,
+		body: Uint8Array | undefined,
+		headers: Record<string, string>,
+		timeoutMs: number
+	): Promise<Headers> {
+		const url = this.getFullUrl(endpoint, params);
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), timeoutMs);
+		const requestId = headers['x-ms-client-request-id'];
+
+		try {
+			ThisExtension.log(`${method} ${url} (request ID: ${requestId})`);
+			const response: Response = await fetch(url, {
+				method,
+				headers,
+				body: body === undefined ? undefined : Buffer.from(body),
+				agent: getProxyAgent(),
+				signal: controller.signal
+			});
+			if (!response.ok) {
+				const responseBody = await response.text();
+				throw new OneLakeApiError(
+					responseBody || `OneLake returned ${response.status} ${response.statusText}.`,
+					response.status,
+					response.statusText,
+					response.headers.get('x-ms-request-id') ?? requestId
+				);
+			}
+			return response.headers;
+		} catch (error) {
+			if (error instanceof OneLakeApiError) throw error;
+			throw new OneLakeApiError(error instanceof Error ? error.message : 'Unable to write file to OneLake.', undefined, undefined, requestId);
+		} finally {
+			clearTimeout(timeout);
+		}
+	}
+
+	private static isTransientStatus(status: number): boolean {
+		return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+	}
+
+	private static isTransientError(error: unknown): boolean {
+		return !(error instanceof OneLakeApiError) || this.isTransientStatus(error.status);
+	}
+
+	private static async delay(milliseconds: number): Promise<void> {
+		await new Promise<void>(resolve => setTimeout(resolve, milliseconds));
+	}
+
+	private static createRequestId(): string {
+		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, character => {
+			const value = Math.floor(Math.random() * 16);
+			return (character === 'x' ? value : (value & 0x3) | 0x8).toString(16);
+		});
 	}
 
 	public static async downloadFile(endpoint: string, targetPath: vscode.Uri, raiseError: boolean = false): Promise<void> {

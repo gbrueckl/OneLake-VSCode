@@ -1,5 +1,10 @@
 # Change Log
 
+**v0.4.0**:
+- added write-support
+- added new logic to show workspace and item names when browsing
+- added new config setting `oneLake.restrictWritesToFiles` to only allow writes to `/Files`
+
 **v0.3.0**:
 - update ReadMe
 

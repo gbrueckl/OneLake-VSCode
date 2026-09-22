@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { OneLakeFSCacheItem } from './OneLakeFSCacheItem';
 import { OneLakeFSUri } from './OneLakeFSUri';
 import { OneLakeApiService } from '../../onelake/OneLakeApiService';
+import { OneLakeFSItemMap } from './OneLakeFSItemMap';
 
 
 export class OneLakeFSWorkspace extends OneLakeFSCacheItem {
@@ -54,11 +55,19 @@ export class OneLakeFSWorkspace extends OneLakeFSCacheItem {
 
 	public async loadChildrenFromApi<T>(): Promise<void> {
 		if (!this._children) {
-			const response = await OneLakeApiService.getList(this._uri.apiPath, {"resource":"filesystem", "recursive":false}, "paths");
+			const [response, fabricItems] = await Promise.all([
+				OneLakeApiService.getList(this._uri.apiPath, {"resource":"filesystem", "recursive":false}, "paths"),
+				OneLakeFSItemMap.loadWorkspace(this.OneLakeUri.apiWorkspace)
+			]);
 			this._apiResponse = response;
+			const fabricItemsById = new Map(fabricItems.map(item => [item.id, item]));
 			this._children = [];
 			for (let apiItem of this._apiResponse) {
-				this._children.push([apiItem.name, apiItem.isDirectory == 'true' ? vscode.FileType.Directory: vscode.FileType.File]);
+				const itemId = apiItem.name.split('/')[0];
+				const item = fabricItemsById.get(itemId) ?? fabricItems.find(fabricItem => `${fabricItem.displayName}.${fabricItem.type.toLowerCase()}` === itemId);
+				if (item) {
+					this._children.push([`${item.displayName}.${item.type.toLowerCase()}`, apiItem.isDirectory == 'true' ? vscode.FileType.Directory: vscode.FileType.File]);
+				}
 			}
 		}
 	}

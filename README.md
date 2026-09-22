@@ -7,22 +7,43 @@
 
 ![OneLake-VSCode](/images/onelake_VSCode.png?raw=true "OneLake-VSCode")
 
-A [VSCode](https://code.visualstudio.com/) extension for to browse Fabric OneLake. It is best used in combination with `Fabric Studio`([Repo](https://github.com/gbrueckl/FabricStudio), [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=GerhardBrueckl.fabricstudio), [Open-VSX](https://open-vsx.org/extension/GerhardBrueckl/fabricstudio)) which offers a `Browse in OneLake` action that automatically adds an item (e.g. Lakehouse) to your VSCode Explorer.
+A [VS Code](https://code.visualstudio.com/) extension for browsing Fabric OneLake. It is best used with `Fabric Studio` ([Repository](https://github.com/gbrueckl/FabricStudio), [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=GerhardBrueckl.fabricstudio), [Open VSX](https://open-vsx.org/extension/GerhardBrueckl/fabricstudio)), which provides a `Browse in OneLake` action that adds an item, such as a lakehouse, to the VS Code Explorer.
 
 # Installation
+
 The extensions can be installed directly from within VSCode by searching for this extension (`GerhardBrueckl.onelake-vscode`) or downloaded from the official Visual Studio Code extension gallery at [OneLake VSCode](https://marketplace.visualstudio.com/items?itemName=GerhardBrueckl.onelake-vscode) and installed manually as `VSIX`.
 
 # Features
-- Custom File System Provider `onelake:/` to browse through the OneLake directly from VSCode Explorer
+
+- Custom File System Provider (`onelake:/`) for browsing Fabric OneLake in VS Code Explorer.
+- Friendly workspace and item names in the explorer; API requests use the corresponding immutable GUIDs.
+- Open and save files directly from VS Code. Saves use the ADLS Gen2 create, append, and flush workflow.
+- Safe file reads with response validation, transient-error retries, configurable timeouts, and a configurable in-memory size limit.
+- Writes are restricted to an item's `/Files` path by default.
 
 # Configuration
+
 The extension supports the following VSCode settings:
 
 |Setting|Description|Example value|
 |-------|-----------|-------------|
 |`oneLake.tenantId`|(Optional) The tenant ID of the remote tenant that you want to connect to OneLake.|A GUID, `abcd1234-1234-5678-9abcd-9d1963e4b9f5`|
 |`oneLake.clientId`|(Optional) A custom ClientID/Application of an AAD application to use when connecting to OneLake.|A GUID, `99887766-1234-5678-9abcd-e4b9f59d1963`|
+|`oneLake.maxReadFileSizeMB`|Maximum file size read into the VS Code extension host. Larger files are rejected to protect memory.|`50` (default)|
+|`oneLake.readTimeoutSeconds`|Timeout for an individual OneLake file read request.|`30` (default)|
+|`oneLake.writeTimeoutSeconds`|Timeout for each create, append, or flush request issued while saving a file.|`30` (default)|
+|`oneLake.restrictWritesToFiles`|When `true`, allow saves only below an item's `/Files` path. Disable only if writes to other OneLake paths are explicitly intended.|`true` (default)|
 
 # Custom File System Provider
-Using the Custom File System Provider for the scheme `onelake:/` you can now mount OneLake folders directly into the VSCode Explorer. The browser is Read-Only as of now. You can easily drag&drop files and folders from OneLake into your local file system to download them.
-The URI has the following structure: `"onelake://<workspaceId>/<itemId>"` where the `<itemId>` can be the ID of any item that is backed by OneLak (e.g. Lakehouse, Warehouse, ...)
+
+Using the Custom File System Provider for the scheme `onelake:/` you can mount OneLake folders directly into the VS Code Explorer. Workspace and item labels use their Fabric display names, so a path looks like:
+
+```text
+onelake:/Finance Workspace/Sales.lakehouse/Files/config/settings.json
+```
+
+The extension maps those labels to workspace and item GUIDs before making OneLake DFS requests. This keeps URIs readable while ensuring reads, listings, and saves use stable identifiers. The extension queries the Fabric Workspaces and Items APIs to build the maps; VS Code may request authorization for the Fabric API on first use.
+
+Files can be opened and saved back to OneLake. Existing-file saves use ETags to avoid silently overwriting a concurrent remote update. New writes are allowed only under `/Files` by default; set `oneLake.restrictWritesToFiles` to `false` to opt out.
+
+Creating directories, deleting, renaming, and copying remain unavailable. You can drag and drop files and folders from OneLake into your local file system to download them.
