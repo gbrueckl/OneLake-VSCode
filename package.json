@@ -2,7 +2,7 @@
 	"name": "onelake-vscode",
 	"displayName": "OneLake VSCode",
 	"description": "Fabric OneLake Extension for VSCode",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"publisher": "GerhardBrueckl",
 	"icon": "resources/onelake_extension.png",
 	"author": {
@@ -68,6 +68,29 @@
 						"type": "string",
 						"markdownDescription": "(Optional) A custom ClientID/AAD Application to use when interacting with Power BI REST APIs.",
 						"default": null
+					},
+					"oneLake.maxReadFileSizeMB": {
+						"type": "number",
+						"minimum": 1,
+						"markdownDescription": "Maximum size, in MB, of a OneLake file read into the VS Code extension host. Larger files must be downloaded with a dedicated tool.",
+						"default": 50
+					},
+					"oneLake.readTimeoutSeconds": {
+						"type": "number",
+						"minimum": 1,
+						"markdownDescription": "Timeout, in seconds, for an individual OneLake file read request.",
+						"default": 30
+					},
+					"oneLake.writeTimeoutSeconds": {
+						"type": "number",
+						"minimum": 1,
+						"markdownDescription": "Timeout, in seconds, for each OneLake file create, append, or flush request made when saving a file.",
+						"default": 30
+					},
+					"oneLake.restrictWritesToFiles": {
+						"type": "boolean",
+						"markdownDescription": "When enabled, files can be saved only under an item's /Files path. Disable only when you explicitly intend to write to other OneLake paths.",
+						"default": true
 					}
 				}
 			}

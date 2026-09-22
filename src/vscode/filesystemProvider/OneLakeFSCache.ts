@@ -4,6 +4,8 @@ import { ThisExtension } from '../../ThisExtension';
 
 import { OneLakeFSCacheItem } from './OneLakeFSCacheItem';
 import { OneLakeFSUri } from './OneLakeFSUri';
+import { OneLakeFSItemMap } from './OneLakeFSItemMap';
+import { OneLakeFSWorkspaceMap } from './OneLakeFSWorkspaceMap';
 
 export type CacheItemKey = string;
 
@@ -58,11 +60,15 @@ export abstract class OneLakeFSCache {
 			item = await OneLakeFSCache.addCacheItem(oneLakeUri);
 		}
 
-		item.writeFile(content, options);
+		await item.writeFile(content, options);
 	}
 
 	public static async reloadFromOneLake(resourceUri: vscode.Uri): Promise<void> {
 		const oneLakeUri: OneLakeFSUri = await OneLakeFSUri.getInstance(resourceUri);
+		if (oneLakeUri.workspace) {
+			OneLakeFSItemMap.clearWorkspace(oneLakeUri.apiWorkspace);
+			OneLakeFSWorkspaceMap.clear();
+		}
 
 		for (let key of OneLakeFSCache._cache.keys()) {
 			if (key.startsWith(oneLakeUri.cacheItemKey)) {

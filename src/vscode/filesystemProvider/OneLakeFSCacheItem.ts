@@ -80,8 +80,13 @@ export class OneLakeFSCacheItem {
 			ThisExtension.log(`Loading OneLake URI Stats ${this.OneLakeUri.uri.toString()} ...`);
 			const initialized = await OneLakeApiService.Initialization();
 			if (initialized) {
-				await this.loadStatsFromApi();
-				this.loadingStateStats = "loaded";
+				try {
+					await this.loadStatsFromApi();
+					this.loadingStateStats = "loaded";
+				} catch (error) {
+					this.loadingStateStats = "not_loaded";
+					throw error;
+				}
 			}
 			else {
 				this.loadingStateStats = "not_loaded";

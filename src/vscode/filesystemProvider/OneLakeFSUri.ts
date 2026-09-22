@@ -9,6 +9,8 @@ import { OneLakeFSItem } from './OneLakeFSItem';
 import { OneLakeFSRoot } from './OneLakeFSRoot';
 import { OneLakeFSWorkspace } from './OneLakeFSWorkspace';
 import { ThisExtension } from '../../ThisExtension';
+import { OneLakeFSItemMap } from './OneLakeFSItemMap';
+import { OneLakeFSWorkspaceMap } from './OneLakeFSWorkspaceMap';
 
 export enum OneLakeUriType {
 	root = 0,
@@ -24,6 +26,8 @@ export class OneLakeFSUri {
 	item?: string;
 	itemType?: string;
 	path?: string;
+	private _apiItem?: string;
+	private _apiWorkspace?: string;
 
 	uriType: OneLakeUriType;
 
@@ -39,14 +43,15 @@ export class OneLakeFSUri {
 			throw vscode.FileSystemError.Unavailable("Invalid OneLake URI!");
 		}
 		
-		let paths = uriString.split("/").filter((path) => path.length > 0).slice(1);
+		const paths = this.uri.path.split("/").filter((path) => path.length > 0);
 
 		if (paths.length >= 1) {
-			this.workspace = paths[1];
+			this.workspace = paths[0];
 		}
 		if (paths.length >= 2) {
-			this.item = paths[1].split(".")[0];
-			this.itemType = paths[1].split(".")[1];
+			this.item = paths[1];
+			const itemTypeSeparator = this.item.lastIndexOf('.');
+			this.itemType = itemTypeSeparator >= 0 ? this.item.substring(itemTypeSeparator + 1) : undefined;
 		}
 		if (paths.length >= 3) {
 			this.path = paths.slice(2).join("/");
@@ -60,6 +65,12 @@ export class OneLakeFSUri {
 
 		if (!oneLakeUri.isValid && !skipValidation) {
 			throw vscode.FileSystemError.FileNotFound(uri);
+		}
+		if (oneLakeUri.workspace) {
+			oneLakeUri._apiWorkspace = await OneLakeFSWorkspaceMap.resolve(oneLakeUri.workspace);
+		}
+		if (oneLakeUri._apiWorkspace && oneLakeUri.item) {
+			oneLakeUri._apiItem = await OneLakeFSItemMap.resolve(oneLakeUri._apiWorkspace, oneLakeUri.item);
 		}
 
 		return oneLakeUri;
@@ -104,14 +115,20 @@ export class OneLakeFSUri {
 	}
 
 	get apiPath(): string {
-		return this.uri.path
+		const path = this.path ? this.path.split('/') : [];
+		return '/' + [this._apiWorkspace ?? this.workspace, this._apiItem ?? this.item, ...path].filter(Boolean).join('/');
+	}
+
+	get apiWorkspace(): string {
+		return this._apiWorkspace ?? this.workspace;
 	}
 
 	get fileSystem():string {
-		return this.uri.path.split("/")[1].replace(" ", "-");
+		return this.apiWorkspace.replace(" ", "-");
 	}
 
 	get directory(): string {
-		return encodeURI("/" + this.uri.path.split("/").slice(2).join("/"));
+		const path = this.path ? this.path.split('/') : [];
+		return encodeURI("/" + [this._apiItem ?? this.item, ...path].filter(Boolean).join('/'));
 	}
 }
